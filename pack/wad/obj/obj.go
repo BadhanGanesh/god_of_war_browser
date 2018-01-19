@@ -251,7 +251,7 @@ func (obj *Object) Marshal(wrsrc *wad.WadNodeRsrc) (interface{}, error) {
 			switch inst.(type) {
 			case *mdl.Model, *scr.ScriptParams, *collision.Collision:
 				if subFileMarshled, err := inst.Marshal(wrsrc.Wad.GetNodeResourceByNodeId(n.Id)); err != nil {
-					panic(err)
+					//panic(err)
 				} else {
 					switch inst.(type) {
 					case *mdl.Model:

@@ -163,6 +163,9 @@ function treeLoadWadNode(wad, tagid) {
                     case 0x0002000f: // mdl
                         summaryLoadWadMdl(data, wad, tagid);
                         break;
+					case 0x0003000f: // ps3 mesh
+						summaryLoadWadMeshPS3(data, wad, tagid);
+						break;
                     case 0x00040001: // obj
                         summaryLoadWadObj(data, wad, tagid);
                         break;
@@ -270,7 +273,6 @@ function parseMeshPacket(object, packet) {
             m_colors[j + 2] = packet.Blend.B[i];
             m_colors[j + 3] = packet.Blend.A[i];
         }
-
         mesh.setBlendColors(m_colors);
     }
 
@@ -385,11 +387,101 @@ function summaryLoadWadMesh(data, wad, nodeid) {
     gr_instance.requestRedraw();
 }
 
+function loadMeshPS3FromAjax(model, data, needTable = false) {
+    var table = needTable ? $('<table>') : undefined;
+    console.log(data);
+	for (var iObj in data.Objects) {
+		var obj = data.Objects[iObj];
+		if (!obj.POS0) { console.warn("Empty object", obj); continue; }
+
+		var m_vertexes = [];
+    	m_vertexes.length = (obj.POS0.length / 4) * 3;
+	    for (var i = 0; i < obj.POS0.length/4; i++) {
+	        m_vertexes[i*3 + 0] = obj.POS0[i*4 + 0];
+	        m_vertexes[i*3 + 1] = obj.POS0[i*4 + 1];
+	        m_vertexes[i*3 + 2] = obj.POS0[i*4 + 2];
+	    }
+
+		var mesh = new grMesh(m_vertexes, obj.Indexes);
+		
+		if (obj.COL0) {
+			var clrarr = [];
+			clrarr.length = obj.COL0.length;
+			for (var i in obj.COL0) {
+				clrarr[i] = obj.COL0[i] * 255;
+			}
+			mesh.setBlendColors(clrarr);
+		}
+		if (obj.BONI) {
+			var bones = new Uint8Array(atob(obj.BONI).split("").map(function(c) { return c.charCodeAt(0); }));
+			
+			var joints1 = [], joints2 = [];
+			joints1.length = bones.length/4;
+			joints2.length = bones.length/4;
+			
+			
+			
+			console.log(bones);
+		}
+		
+		
+			/*
+			        var joints1 = packet.Joints;
+			        var joints2 = (!!packet.Joints2) ? packet.Joints2 : undefined;
+			        mesh.setJointIds(object.JointMapper, joints1, joints2);
+			*/
+
+		if (table) {
+            var label = $('<label>');
+            var chbox = $('<input type="checkbox" checked>');
+            var td = $('<td>').append(label);
+            chbox.click(mesh, function(ev) {
+                ev.data.setVisible(this.checked);
+                gr_instance.requestRedraw();
+            });
+            td.mouseenter([model, mesh], function(ev) {
+                ev.data[0].showExclusiveMeshes([ev.data[1]]);
+                gr_instance.requestRedraw();
+            }).mouseleave(model, function(ev, a) {
+                ev.data.showExclusiveMeshes();
+                gr_instance.requestRedraw();
+            });
+            label.append(chbox);
+            label.append("o_" + iObj);
+            table.append($('<tr>').append(td));
+        }
+
+		model.addMesh(mesh);		
+	}
+    return table;
+}
+
+function summaryLoadWadMeshPS3(data, wad, nodeid) {
+    gr_instance.cleanup();
+    set3dVisible(true);
+
+    var mdl = new grModel();
+
+    var dumplink = getActionLinkForWadNode(wad, nodeid, 'obj');
+    dataSummary.append($('<a class="center">').attr('href', dumplink).append('Download .obj (xyz+norm+uv)'));
+
+    var table = loadMeshPS3FromAjax(mdl, data, true);
+    dataSummary.append(table);
+
+    gr_instance.models.push(mdl);
+    gr_instance.requestRedraw();
+}
+
 function loadMdlFromAjax(mdl, data, parseScripts = false, needTable = false) {
     var table = undefined;
-    if (data.Meshes && data.Meshes.length) {
-        table = loadMeshFromAjax(mdl, data.Meshes[0], needTable);
-    }
+	
+	if (data.PS3Mesh) {
+		table = loadMeshPS3FromAjax(mdl, data.PS3Mesh, needTable);
+	} else {
+	    if (data.Meshes && data.Meshes.length) {
+	        table = loadMeshFromAjax(mdl, data.Meshes[0], needTable);
+	    }
+	}
 
     for (var i in data.Materials) {
         var material = new grMaterial();

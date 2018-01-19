@@ -9,6 +9,7 @@ import (
 	"github.com/mogaika/god_of_war_browser/pack/wad"
 	file_mat "github.com/mogaika/god_of_war_browser/pack/wad/mat"
 	file_mesh "github.com/mogaika/god_of_war_browser/pack/wad/mesh"
+	file_ps3mesh "github.com/mogaika/god_of_war_browser/pack/wad/ps3mesh"
 	file_scr "github.com/mogaika/god_of_war_browser/pack/wad/scr"
 )
 
@@ -44,6 +45,7 @@ func NewFromData(buf []byte) (*Model, error) {
 type Ajax struct {
 	Raw       *Model
 	Meshes    []*file_mesh.Mesh
+	PS3Mesh   *file_ps3mesh.Mesh
 	Materials []interface{}
 	Scripts   []interface{}
 	Other     []interface{}
@@ -56,17 +58,20 @@ func (mdl *Model) Marshal(wrsrc *wad.WadNodeRsrc) (interface{}, error) {
 		name := n.Tag.Name
 		sn, _, err := wrsrc.Wad.GetInstanceFromNode(n.Id)
 		if err != nil {
-			return nil, fmt.Errorf("Error when extracting node %d->%s mdl info: %v", i, name, err)
+			//return nil, fmt.Errorf("Error when extracting node %d->%s mdl info: %v", i, name, err)
 		} else {
 			switch sn.(type) {
+			case *file_ps3mesh.Mesh:
+				res.PS3Mesh = sn.(*file_ps3mesh.Mesh)
 			case *file_mesh.Mesh:
 				res.Meshes = append(res.Meshes, sn.(*file_mesh.Mesh))
 			case *file_mat.Material:
-				mat, err := sn.(*file_mat.Material).Marshal(wrsrc.Wad.GetNodeResourceByNodeId(n.Id))
+				/*mat, err := sn.(*file_mat.Material).Marshal(wrsrc.Wad.GetNodeResourceByNodeId(n.Id))
 				if err != nil {
-					return nil, fmt.Errorf("Error when getting material info %d-'%s': %v", i, name, err)
-				}
-				res.Materials = append(res.Materials, mat)
+					//return nil, fmt.Errorf("Error when getting material info %d-'%s': %v", i, name, err)
+				} else {
+					res.Materials = append(res.Materials, mat)
+				}*/
 			case *file_scr.ScriptParams:
 				scr, err := sn.(*file_scr.ScriptParams).Marshal(wrsrc.Wad.GetNodeResourceByNodeId(n.Id))
 				if err != nil {
